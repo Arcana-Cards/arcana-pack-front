@@ -4,8 +4,8 @@ import { api } from '@/api/client';
 import type { User } from '@/types';
 
 export const useAuthStore = defineStore('auth', () => {
-  const token = ref(localStorage.getItem('arcana_token') || '');
-  const user = ref<User | null>(JSON.parse(localStorage.getItem('arcana_user') || 'null'));
+  const token = ref(localStorage.getItem('anacra_token') || '');
+  const user = ref<User | null>(JSON.parse(localStorage.getItem('anacra_user') || 'null'));
 
   const isLoggedIn = computed(() => Boolean(token.value));
   const isAdmin = computed(() => user.value?.role === 'admin');
@@ -13,8 +13,8 @@ export const useAuthStore = defineStore('auth', () => {
   function persist(nextToken: string, nextUser: User) {
     token.value = nextToken;
     user.value = nextUser;
-    localStorage.setItem('arcana_token', nextToken);
-    localStorage.setItem('arcana_user', JSON.stringify(nextUser));
+    localStorage.setItem('anacra_token', nextToken);
+    localStorage.setItem('anacra_user', JSON.stringify(nextUser));
   }
 
   async function login(email: string, password: string) {
@@ -36,14 +36,14 @@ export const useAuthStore = defineStore('auth', () => {
   async function refreshProfile() {
     if (!token.value) return;
     user.value = await api<User>('/auth/profile');
-    localStorage.setItem('arcana_user', JSON.stringify(user.value));
+    localStorage.setItem('anacra_user', JSON.stringify(user.value));
   }
 
   function logout() {
     token.value = '';
     user.value = null;
-    localStorage.removeItem('arcana_token');
-    localStorage.removeItem('arcana_user');
+    localStorage.removeItem('anacra_token');
+    localStorage.removeItem('anacra_user');
   }
 
   return { token, user, isLoggedIn, isAdmin, login, register, refreshProfile, logout };

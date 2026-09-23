@@ -2,7 +2,7 @@
   <div class="card-wrap">
     <div
       class="card-scene"
-      :class="[`rarity-${card.rarity}`, `frame-${card.frameStyle || 'classic'}`, { compact, pocket, faceup, foil: showFoil }]"
+      :class="[`rarity-${card.rarity}`, `frame-${card.frameStyle || 'classic'}`, { compact, pocket, large, faceup, foil: showFoil }]"
       :style="sceneStyle"
       @mousemove="onMove"
       @mouseleave="onLeave"
@@ -11,7 +11,7 @@
         <div class="flipper" :class="{ faceup }">
           <div class="face back">
             <div class="face-inner">
-              <ArcanaCardBack :uid="uid" />
+              <AnacraCardBack :uid="uid" />
             </div>
           </div>
           <div class="face front" :class="finishClass">
@@ -76,7 +76,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { mediaUrl } from '@/api/client';
 import { giphyIdFromUrl, resolveArtSrc } from '@/media/giphy';
-import ArcanaCardBack from '@/components/ArcanaCardBack.vue';
+import AnacraCardBack from '@/components/AnacraCardBack.vue';
 import { hashSeed, KIND_LABELS, RARITY_COLORS, RARITY_LABELS, kindHasCombatStats, type Card } from '@/types';
 
 function unwrapQuotes(value: string | null | undefined): string {
@@ -96,6 +96,7 @@ const props = withDefaults(defineProps<{
   faceup?: boolean;
   compact?: boolean;
   pocket?: boolean;
+  large?: boolean;
   artOverride?: string;
   ownedCopies?: number | null;
   inspect?: boolean;
@@ -105,6 +106,7 @@ const props = withDefaults(defineProps<{
   faceup: true,
   compact: false,
   pocket: false,
+  large: false,
   artOverride: '',
   ownedCopies: undefined,
   inspect: false,
@@ -279,6 +281,7 @@ watch(
     props.card.rarity,
     props.compact,
     props.pocket,
+    props.large,
   ],
   scheduleFit,
 );
@@ -319,6 +322,10 @@ function onLeave() {
   cursor: pointer;
 }
 .card-scene.compact { width: 210px; height: 300px; }
+.card-scene.large {
+  width: min(420px, 86vw, calc(78vh * 0.7));
+  height: min(600px, 78vh, calc(86vw * 1.428));
+}
 .card-scene.pocket { width: 118px; height: 168px; }
 .card-scene.pocket .desc,
 .card-scene.pocket .flavor,

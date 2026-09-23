@@ -16,7 +16,7 @@ export class ApiError extends Error {
 }
 
 export async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const token = localStorage.getItem('arcana_token');
+  const token = localStorage.getItem('anacra_token');
   const headers = new Headers(options.headers);
   const isForm = typeof FormData !== 'undefined' && options.body instanceof FormData;
   if (!isForm && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
@@ -41,7 +41,7 @@ export async function streamAiFromTheme<T>(
   onProgress: (event: AiProgressEvent) => void,
   onDrafts?: (drafts: T[]) => void,
 ): Promise<T[]> {
-  const token = localStorage.getItem('arcana_token');
+  const token = localStorage.getItem('anacra_token');
   const res = await fetch(`${API_BASE}/admin/ai/from-theme`, {
     method: 'POST',
     headers: {

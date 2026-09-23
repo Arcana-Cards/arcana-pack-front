@@ -1,7 +1,7 @@
 <template>
   <div class="shell" :class="{ 'with-rail': showAdminRail }">
     <header class="topbar">
-      <RouterLink to="/" class="brand">Arcana <span>Pack</span></RouterLink>
+      <RouterLink to="/" class="brand">Anacra <span>Pack</span></RouterLink>
       <nav class="nav">
         <RouterLink to="/">Boosters</RouterLink>
         <RouterLink to="/notebooks">Cahiers</RouterLink>

@@ -48,6 +48,7 @@
                 draggable="true"
                 @dragstart="onDragStart($event, pocket.copy)"
                 @dragend="onDragEnd"
+                @dblclick.stop="inspectCopy(pocket.copy)"
               >
                 <TradingCard
                   :card="pocket.copy.card"
@@ -56,6 +57,12 @@
                   :owned-copies="copiesOf(pocket.copy.card.id)"
                   :pocket="true"
                 />
+                <button
+                  class="inspect-btn"
+                  type="button"
+                  aria-label="Voir la carte en grand"
+                  @click.stop="inspectCopy(pocket.copy)"
+                >Agrandir</button>
                 <span v-if="copiesOf(pocket.copy.card.id) > 1" class="qty">×{{ copiesOf(pocket.copy.card.id) }}</span>
               </div>
               <div v-else class="empty-sleeve">
@@ -92,6 +99,7 @@
                 draggable="true"
                 @dragstart="onDragStart($event, pocket.copy)"
                 @dragend="onDragEnd"
+                @dblclick.stop="inspectCopy(pocket.copy)"
               >
                 <TradingCard
                   :card="pocket.copy.card"
@@ -100,6 +108,12 @@
                   :owned-copies="copiesOf(pocket.copy.card.id)"
                   :pocket="true"
                 />
+                <button
+                  class="inspect-btn"
+                  type="button"
+                  aria-label="Voir la carte en grand"
+                  @click.stop="inspectCopy(pocket.copy)"
+                >Agrandir</button>
                 <span v-if="copiesOf(pocket.copy.card.id) > 1" class="qty">×{{ copiesOf(pocket.copy.card.id) }}</span>
               </div>
               <div v-else class="empty-sleeve">
@@ -126,16 +140,19 @@
         <p>Glisse n’importe quelle carte dans n’importe quelle pochette. Clic pour sélectionner, puis clic sur la case.</p>
       </div>
       <div v-if="pileStacks.length" class="pile-row">
-        <button
+        <div
           v-for="stack in pileStacks"
           :key="stack.copy.card.id"
           class="sleeve pile-card"
           :class="{ selected: selectedId === stack.copy.id }"
-          type="button"
+          role="button"
+          tabindex="0"
           draggable="true"
           @dragstart="onDragStart($event, stack.copy)"
           @dragend="onDragEnd"
           @click.stop="selectCopy(stack.copy)"
+          @dblclick.stop="inspectCopy(stack.copy)"
+          @keyup.enter.stop="selectCopy(stack.copy)"
         >
           <TradingCard
             :card="stack.copy.card"
@@ -144,11 +161,24 @@
             :owned-copies="copiesOf(stack.copy.card.id)"
             :pocket="true"
           />
+          <button
+            class="inspect-btn"
+            type="button"
+            aria-label="Voir la carte en grand"
+            @click.stop="inspectCopy(stack.copy)"
+          >Agrandir</button>
           <span v-if="stack.count > 1" class="qty">×{{ stack.count }}</span>
-        </button>
+        </div>
       </div>
       <p v-else class="empty-pile">Toutes tes cartes de cette édition sont rangées dans le cahier.</p>
     </aside>
+    <CardLightbox
+      :card="inspected?.card ?? null"
+      :foil="inspected?.foil"
+      :animated="inspected?.animated"
+      :owned-copies="inspected?.copies"
+      @close="inspected = null"
+    />
   </AppShell>
 </template>
 
@@ -156,9 +186,10 @@
 import { computed, onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import AppShell from '@/components/AppShell.vue';
+import CardLightbox from '@/components/CardLightbox.vue';
 import TradingCard from '@/components/TradingCard.vue';
 import { api, ApiError } from '@/api/client';
-import type { BinderPocket, LooseCopy, NotebookDetail } from '@/types';
+import type { BinderPocket, Card, LooseCopy, NotebookDetail } from '@/types';
 
 const SLOTS_PER_PAGE = 9;
 const SLOTS_PER_SPREAD = 18;
@@ -172,6 +203,7 @@ const dragging = ref<LooseCopy | null>(null);
 const pileOver = ref(false);
 const hint = ref('');
 const busy = ref(false);
+const inspected = ref<{ card: Card; foil: boolean; animated: boolean; copies: number } | null>(null);
 
 const pockets = computed<BinderPocket[]>(() => {
   const base = data.value?.pockets ?? [];
@@ -248,6 +280,15 @@ function addPage() {
 function selectCopy(copy: LooseCopy) {
   selectedId.value = selectedId.value === copy.id ? null : copy.id;
   hint.value = selectedId.value ? 'Choisis n’importe quelle pochette' : '';
+}
+
+function inspectCopy(copy: LooseCopy) {
+  inspected.value = {
+    card: copy.card,
+    foil: copy.foil,
+    animated: copy.animated,
+    copies: copiesOf(copy.card.id),
+  };
 }
 
 function onDragStart(event: DragEvent, copy: LooseCopy) {
@@ -453,6 +494,25 @@ async function unplace(copyId: number) {
   border-radius: 50%;
   background: radial-gradient(circle at 35% 30%, #f5e6a8, #8a6d1c 55%, #3b2a10);
   box-shadow: 0 2px 4px rgba(0,0,0,.4);
+}
+.inspect-btn {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  z-index: 3;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid rgba(80, 50, 20, .35);
+  background: rgba(255, 248, 230, .92);
+  color: #3b2a18;
+  font-size: 0.68rem;
+  font-family: Cinzel, serif;
+  cursor: zoom-in;
+}
+.pile-card .inspect-btn {
+  color: var(--gold-2);
+  background: rgba(12, 8, 18, .88);
+  border-color: rgba(212, 175, 55, .35);
 }
 .sleeve { display: grid; justify-items: center; gap: 4px; cursor: grab; position: relative; }
 .sleeve :deep(img) { pointer-events: none; }

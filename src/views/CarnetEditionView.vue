@@ -23,14 +23,21 @@
         :class="{ owned: slot.owned, missing: !slot.owned }"
       >
         <span class="num">#{{ pad(slot.collectorNumber) }}</span>
-        <TradingCard
+        <button
           v-if="slot.owned && slot.card"
-          :card="slot.card"
-          :foil="slot.foilCopies > 0"
-          :animated="slot.animatedCopies > 0"
-          :owned-copies="slot.copies"
-          :pocket="true"
-        />
+          class="card-hit"
+          type="button"
+          :aria-label="`Ouvrir ${slot.card.name}`"
+          @click="inspectSlot(slot)"
+        >
+          <TradingCard
+            :card="slot.card"
+            :foil="slot.foilCopies > 0"
+            :animated="slot.animatedCopies > 0"
+            :owned-copies="slot.copies"
+            :pocket="true"
+          />
+        </button>
         <div v-else class="mystery" :aria-label="`Carte #${pad(slot.collectorNumber)} inconnue`">?</div>
         <div class="meta">
           <strong v-if="slot.owned">{{ slot.card?.name }}</strong>
@@ -39,6 +46,13 @@
         </div>
       </article>
     </div>
+    <CardLightbox
+      :card="inspected?.card ?? null"
+      :foil="inspected?.foil"
+      :animated="inspected?.animated"
+      :owned-copies="inspected?.copies"
+      @close="inspected = null"
+    />
   </AppShell>
 </template>
 
@@ -46,12 +60,14 @@
 import { onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import AppShell from '@/components/AppShell.vue';
+import CardLightbox from '@/components/CardLightbox.vue';
 import TradingCard from '@/components/TradingCard.vue';
 import { api } from '@/api/client';
-import type { NotebookDetail } from '@/types';
+import type { Card, NotebookDetail, NotebookSlot } from '@/types';
 
 const route = useRoute();
 const data = ref<NotebookDetail | null>(null);
+const inspected = ref<{ card: Card; foil: boolean; animated: boolean; copies: number } | null>(null);
 
 onMounted(async () => {
   data.value = await api<NotebookDetail>(`/collection/notebooks/${route.params.editionId}`);
@@ -59,6 +75,16 @@ onMounted(async () => {
 
 function pad(n: number) {
   return String(n).padStart(3, '0');
+}
+
+function inspectSlot(slot: NotebookSlot) {
+  if (!slot.owned || !slot.card) return;
+  inspected.value = {
+    card: slot.card,
+    foil: slot.foilCopies > 0,
+    animated: slot.animatedCopies > 0,
+    copies: slot.copies,
+  };
 }
 </script>
 
@@ -78,6 +104,13 @@ function pad(n: number) {
   background: rgba(12, 8, 18, .78);
 }
 .entry.owned { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.card-hit {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: zoom-in;
+}
 .entry.missing { filter: saturate(.35); }
 .num {
   font-family: Cinzel, serif;

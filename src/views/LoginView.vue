@@ -1,7 +1,7 @@
 <template>
   <div class="auth-wrap">
     <div class="panel auth-card">
-      <h1>Arcana Pack</h1>
+      <h1>Anacra Pack</h1>
       <p class="lede">Entre dans la chambre forte.</p>
       <form @submit.prevent="submit">
         <label>Email <input v-model="email" type="email" required /></label>
@@ -21,7 +21,7 @@ import { useAuthStore } from '@/stores/auth';
 
 const auth = useAuthStore();
 const router = useRouter();
-const email = ref('admin@arcana.local');
+const email = ref('admin@anacra.local');
 const password = ref('password');
 const error = ref('');
 const loading = ref(false);

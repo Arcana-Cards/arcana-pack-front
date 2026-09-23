@@ -2,7 +2,7 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-ARG VITE_API_BASE=https://arcana-back.inelli-prog.com/api
+ARG VITE_API_BASE=https://anacra-back.inelli-prog.com/api
 ENV VITE_API_BASE=$VITE_API_BASE
 
 COPY package.json package-lock.json ./

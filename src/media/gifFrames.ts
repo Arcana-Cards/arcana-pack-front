@@ -16,7 +16,7 @@ export async function fetchGifBuffer(src: string): Promise<ArrayBuffer> {
     if (buf.byteLength < 16) throw new Error('empty');
     return buf;
   } catch {
-    const token = localStorage.getItem('arcana_token');
+    const token = localStorage.getItem('anacra_token');
     const target = /^https?:/i.test(src) ? src : direct;
     const proxied = await fetch(`${API_ORIGIN}/api/admin/uploads/fetch?url=${encodeURIComponent(target)}`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},

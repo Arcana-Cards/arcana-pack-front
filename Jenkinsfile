@@ -6,10 +6,10 @@ pipeline {
     }
 
     environment {
-        IMAGE_NAME = "arcana-pack-front"
+        IMAGE_NAME = "anacra-pack-front"
         REGISTRY_URL = "docker.io"
         REGISTRY_NAMESPACE = "villaroyakevin"
-        VITE_API_BASE = "https://arcana-back.inelli-prog.com/api"
+        VITE_API_BASE = "https://anacra-back.inelli-prog.com/api"
     }
 
     stages {

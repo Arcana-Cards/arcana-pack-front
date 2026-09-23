@@ -38,7 +38,7 @@
         <path fill="#120818" d="M0 -18 L6 2 H-6 Z" />
         <circle r="4.5" fill="#fff3c4" />
       </g>
-      <text x="140" y="278" text-anchor="middle" fill="#f4efe6" font-family="Cinzel, serif" font-size="22" letter-spacing="4">ARCANA</text>
+      <text x="140" y="278" text-anchor="middle" fill="#f4efe6" font-family="Cinzel, serif" font-size="22" letter-spacing="4">ANACRA</text>
       <text x="140" y="302" text-anchor="middle" fill="#d4af37" font-family="Cinzel, serif" font-size="13" letter-spacing="8">PACK</text>
       <g fill="#d4af37">
         <circle cx="140" cy="54" r="2.4" />
