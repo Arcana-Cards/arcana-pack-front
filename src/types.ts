@@ -15,6 +15,7 @@ export const FRAME_STYLES: FrameStyle[] = ['classic', 'ornate', 'rune', 'swamp']
 export const HOLOFOIL_PATTERNS: HolofoilPattern[] = ['none', 'linear'];
 export const CARD_KINDS: CardKind[] = ['creature', 'object', 'land', 'spell', 'enchantment'];
 export const ART_FILTERS: ArtFilter[] = ['none', 'shiny', 'blur', 'holo', 'chrome', 'vignette', 'swamp', 'neon', 'pixel'];
+export const CATALOG_ART_FILTERS: ArtFilter[] = ART_FILTERS.filter((filter) => filter !== 'holo' && filter !== 'shiny');
 export const BORDER_FINISHES: BorderFinish[] = ['matte', 'shiny', 'metallic', 'neon', 'prism', 'swamp'];
 
 export const RARITY_LABELS: Record<Rarity, string> = {
@@ -202,6 +203,96 @@ export interface BoosterTemplate {
   animatedChance: number;
   allowDuplicates: boolean;
   artUrl: string | null;
+}
+
+export interface JiraStatus {
+  configured: boolean;
+  baseUrl: string | null;
+  email: string | null;
+  tokenSet: boolean;
+  reachable?: boolean;
+  error?: string | null;
+}
+
+export interface JiraSprint {
+  id: number;
+  name: string;
+  state: string;
+  startDate?: string | null;
+  endDate?: string | null;
+  completeDate?: string | null;
+  boardId?: number;
+}
+
+export interface SuggestedPack {
+  templateId: number;
+  name: string;
+  quantity: number;
+  reason: string;
+}
+
+export interface SprintContributor {
+  jiraName: string;
+  jiraEmail: string | null;
+  userId: number | null;
+  username: string | null;
+  issuesDone: number;
+  issuesInProgress?: number;
+  issuesTotal: number;
+  storyPoints: number;
+  storyPointsCommitted?: number;
+  completionPct?: number;
+  suggestedCards: number;
+  suggestedPacks: SuggestedPack[];
+}
+
+export interface SprintMetrics {
+  sprint: {
+    id: number;
+    name: string;
+    state: string;
+    startDate: string | null;
+    endDate: string | null;
+    completeDate: string | null;
+  };
+  points: {
+    committed: number;
+    completed: number;
+    remaining: number;
+    added: number;
+    startPct: number;
+    endPct: number;
+  };
+  issues: {
+    total: number;
+    done: number;
+    inProgress: number;
+    todo: number;
+    donePct: number;
+    bugs: number;
+    stories: number;
+    unestimated: number;
+    unassigned: number;
+  };
+  time: {
+    elapsedPct: number;
+    daysTotal: number;
+    daysLeft: number;
+    ahead: boolean | null;
+  };
+}
+
+export interface SprintRewardGuide {
+  storyPointsField: string | null;
+  totals: {
+    storyPoints: number;
+    issuesDone: number;
+    suggestedCards: number;
+    suggestedBoosters: number;
+    matched: number;
+  };
+  metrics?: SprintMetrics;
+  contributors: SprintContributor[];
 }
 
 export interface UserBooster {

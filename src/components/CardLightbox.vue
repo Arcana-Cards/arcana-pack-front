@@ -12,6 +12,7 @@
       <TradingCard
         :card="card"
         :foil="foil"
+        :foil-badge="foilBadge"
         :animated="animated"
         :owned-copies="ownedCopies"
         large
@@ -28,10 +29,12 @@ import type { Card } from '@/types';
 const props = withDefaults(defineProps<{
   card: Card | null;
   foil?: boolean;
+  foilBadge?: boolean;
   animated?: boolean;
   ownedCopies?: number;
 }>(), {
   foil: false,
+  foilBadge: undefined,
   animated: false,
   ownedCopies: 1,
 });

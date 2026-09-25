@@ -198,6 +198,8 @@ function previewCard(draft: AiDraft): Card {
     artUrl: draft.artUrl || '',
     artAnimatedUrl: draft.artAnimatedUrl || '',
     giphyUrl: draft.giphyUrl || draft.artAnimatedUrl || '',
+    artFilter: 'none',
+    foil: false,
   });
 }
 
@@ -263,6 +265,7 @@ async function saveAll() {
           collectorNumber: 0,
           foil: false,
           animated: false,
+          artFilter: 'none',
           holofoilPattern: 'none',
           frameStyle: 'classic',
           giphyUrl: draft.giphyUrl || draft.artAnimatedUrl || null,

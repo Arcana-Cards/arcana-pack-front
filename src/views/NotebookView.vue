@@ -52,7 +52,8 @@
               >
                 <TradingCard
                   :card="pocket.copy.card"
-                  :foil="pocket.copy.foil"
+                  :foil="hasFoil(pocket.copy.card.id)"
+                  :foil-badge="pocket.copy.foil"
                   :animated="pocket.copy.animated"
                   :owned-copies="copiesOf(pocket.copy.card.id)"
                   :pocket="true"
@@ -103,7 +104,8 @@
               >
                 <TradingCard
                   :card="pocket.copy.card"
-                  :foil="pocket.copy.foil"
+                  :foil="hasFoil(pocket.copy.card.id)"
+                  :foil-badge="pocket.copy.foil"
                   :animated="pocket.copy.animated"
                   :owned-copies="copiesOf(pocket.copy.card.id)"
                   :pocket="true"
@@ -156,7 +158,8 @@
         >
           <TradingCard
             :card="stack.copy.card"
-            :foil="stack.copy.foil"
+            :foil="hasFoil(stack.copy.card.id)"
+            :foil-badge="stack.count === 1 && stack.copy.foil"
             :animated="stack.copy.animated"
             :owned-copies="copiesOf(stack.copy.card.id)"
             :pocket="true"
@@ -175,6 +178,7 @@
     <CardLightbox
       :card="inspected?.card ?? null"
       :foil="inspected?.foil"
+      :foil-badge="inspected?.foilBadge"
       :animated="inspected?.animated"
       :owned-copies="inspected?.copies"
       @close="inspected = null"
@@ -203,7 +207,7 @@ const dragging = ref<LooseCopy | null>(null);
 const pileOver = ref(false);
 const hint = ref('');
 const busy = ref(false);
-const inspected = ref<{ card: Card; foil: boolean; animated: boolean; copies: number } | null>(null);
+const inspected = ref<{ card: Card; foil: boolean; foilBadge: boolean; animated: boolean; copies: number } | null>(null);
 
 const pockets = computed<BinderPocket[]>(() => {
   const base = data.value?.pockets ?? [];
@@ -257,6 +261,12 @@ function copiesOf(cardId: number) {
   return inPile + inBinder || 1;
 }
 
+function hasFoil(cardId: number) {
+  if (!data.value) return false;
+  return data.value.pile.some((copy) => copy.card.id === cardId && copy.foil)
+    || data.value.pockets.some((pocket) => pocket.copy?.card.id === cardId && pocket.copy.foil);
+}
+
 function findCopy(id: number | null): LooseCopy | null {
   if (!id || !data.value) return null;
   const piled = data.value.pile.find((copy) => copy.id === id);
@@ -286,6 +296,7 @@ function inspectCopy(copy: LooseCopy) {
   inspected.value = {
     card: copy.card,
     foil: copy.foil,
+    foilBadge: copy.foil,
     animated: copy.animated,
     copies: copiesOf(copy.card.id),
   };

@@ -33,6 +33,7 @@
           <TradingCard
             :card="slot.card"
             :foil="slot.foilCopies > 0"
+            :foil-badge="false"
             :animated="slot.animatedCopies > 0"
             :owned-copies="slot.copies"
             :pocket="true"
@@ -43,12 +44,16 @@
           <strong v-if="slot.owned">{{ slot.card?.name }}</strong>
           <strong v-else class="unknown">Inconnue</strong>
           <span class="qty">{{ slot.owned ? `×${slot.copies}` : '?' }}</span>
+          <span v-if="slot.foilCopies" class="foil-count">
+            {{ slot.foilCopies }} brillante{{ slot.foilCopies > 1 ? 's' : '' }}
+          </span>
         </div>
       </article>
     </div>
     <CardLightbox
       :card="inspected?.card ?? null"
       :foil="inspected?.foil"
+      :foil-badge="false"
       :animated="inspected?.animated"
       :owned-copies="inspected?.copies"
       @close="inspected = null"
@@ -146,6 +151,10 @@ function inspectSlot(slot: NotebookSlot) {
   font-family: Cinzel, serif;
   font-size: 1.05rem;
   color: var(--gold-2);
+}
+.foil-count {
+  font-size: 0.72rem;
+  color: var(--gold);
 }
 .entry.missing .qty { color: var(--muted); font-size: 1.4rem; }
 </style>

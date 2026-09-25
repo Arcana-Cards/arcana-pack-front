@@ -46,7 +46,7 @@
                 <div class="meta">
                   <span class="badge r-rare">{{ typeLine }}</span>
                   <span class="badge" :class="`r-${card.rarity}`">{{ rarityLabel }}</span>
-                  <span v-if="showFoil" class="badge r-legendary">Brillante</span>
+                  <span v-if="showFoilBadge" class="badge r-legendary">Brillante</span>
                   <span v-if="card.artAnimatedUrl" class="badge r-epic">GIF</span>
                 </div>
                 <p class="desc">{{ card.description }}</p>
@@ -56,7 +56,7 @@
                 <span>{{ paddedNumber }} · {{ card.editionCode || 'SET' }}{{ card.editionName ? ` · ${card.editionName}` : '' }}</span>
                 <strong v-if="showCombatStats">{{ card.power ?? 0 }}/{{ card.toughness ?? 0 }}</strong>
               </footer>
-              <div class="foil-sheet" :class="holoActive ? 'linear' : 'none'" />
+              <div class="foil-sheet" :class="showFoil ? 'linear' : 'none'" />
             </div>
           </div>
         </div>
@@ -92,6 +92,7 @@ function unwrapQuotes(value: string | null | undefined): string {
 const props = withDefaults(defineProps<{
   card: Card;
   foil?: boolean;
+  foilBadge?: boolean;
   animated?: boolean;
   faceup?: boolean;
   compact?: boolean;
@@ -102,6 +103,7 @@ const props = withDefaults(defineProps<{
   inspect?: boolean;
 }>(), {
   foil: false,
+  foilBadge: undefined,
   animated: false,
   faceup: true,
   compact: false,
@@ -148,9 +150,15 @@ function onArtError() {
 watch(() => [props.card.artUrl, props.card.artAnimatedUrl, props.artOverride], () => {
   brokenArt.value = '';
 });
-const showFoil = computed(() => props.foil || props.card.artFilter === 'holo' || props.card.artFilter === 'shiny');
-const holoActive = computed(() => props.card.artFilter === 'holo');
-const filterClass = computed(() => `filter-${props.card.artFilter || 'none'}`);
+const showFoil = computed(() => Boolean(props.foil));
+const showFoilBadge = computed(() => props.foilBadge ?? props.foil);
+const holoActive = computed(() => Boolean(props.foil));
+const filterClass = computed(() => {
+  if (props.foil) return 'filter-holo';
+  const filter = props.card.artFilter || 'none';
+  if (filter === 'holo' || filter === 'shiny') return 'filter-none';
+  return `filter-${filter}`;
+});
 const finishClass = computed(() => `finish-${props.card.borderFinish || 'matte'}`);
 const yaw = computed(() => tilt.value.y + inspectYaw.value);
 const magicGlyph = computed(() => ({

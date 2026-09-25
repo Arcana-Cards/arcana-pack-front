@@ -106,7 +106,7 @@
           <div class="pane-body grid form">
             <label>Filtre d’art
               <select v-model="form.artFilter">
-                <option v-for="f in ART_FILTERS" :key="f" :value="f">{{ FILTER_LABELS[f] }}</option>
+                <option v-for="f in CATALOG_ART_FILTERS" :key="f" :value="f">{{ FILTER_LABELS[f] }}</option>
               </select>
             </label>
             <label>Finition de bordure
@@ -246,7 +246,7 @@ import { api } from '@/api/client';
 import { giphyGifUrl, giphyIdFromUrl, giphyStillUrl } from '@/media/giphy';
 import { gifFrameToBlob, loadGifStrip, type GifStrip } from '@/media/gifFrames';
 import {
-  ART_FILTERS, BORDER_FINISHES, BORDER_FINISH_LABELS, CARD_KINDS, CARD_STYLES, CATALOG_RARITY_TARGETS,
+  CATALOG_ART_FILTERS, BORDER_FINISHES, BORDER_FINISH_LABELS, CARD_KINDS, CARD_STYLES, CATALOG_RARITY_TARGETS,
   FILTER_LABELS, KIND_LABELS, MAGIC_LABELS, MAGIC_TYPES,
   RARITY_COLORS, RARITY_LABELS, RARITIES, STYLE_LABELS, hydrateCard, kindHasCombatStats,
   type Card, type Edition, type Rarity, type Universe,
@@ -524,6 +524,7 @@ async function fillWithAi() {
       collectorNumber,
       foil: false,
       holofoilPattern: 'none',
+      artFilter: 'none',
       frameStyle: 'classic',
       artUrl: draft.artUrl || form.value.artUrl,
       artAnimatedUrl: draft.artAnimatedUrl || form.value.artAnimatedUrl,
@@ -612,6 +613,7 @@ async function save() {
       ...form.value,
       foil: false,
       holofoilPattern: 'none',
+      artFilter: form.value.artFilter === 'holo' || form.value.artFilter === 'shiny' ? 'none' : form.value.artFilter,
       frameStyle: 'classic',
       collectorNumber: 0,
       artUrl: form.value.artUrl || null,
