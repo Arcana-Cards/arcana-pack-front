@@ -15,7 +15,7 @@
         <p v-if="sprintDates" class="lede">{{ sprintDates }}</p>
         <p v-if="jira.error || jiraError" class="error">{{ jira.error || jiraError }}</p>
         <p v-else-if="jira.configured" class="lede">
-          40 cartes à 100 % du périmètre de début de sprint. Moins ou plus selon ce pourcentage.
+          40 cartes à 100 % du périmètre de début. Les tickets ajoutés en cours, s’ils sont livrés, donnent des cartes en plus au même tarif.
           Un booster Épique si plus de points livrés que le sprint précédent.
         </p>
         <p v-else class="lede">Jira n’est pas encore joignable depuis l’API.</p>
@@ -99,13 +99,18 @@
         </div>
         <article>
           <small>{{ guide.metrics.sprint.state === 'active' ? 'Maintenant' : 'Fin de sprint' }}</small>
-          <strong>{{ fmtPts(guide.metrics.points.completed) }}</strong>
+          <strong>{{ fmtPts(guide.metrics.points.completedStart ?? guide.metrics.points.completed) }}</strong>
           <em>{{ guide.metrics.points.endPct }}% vs début</em>
         </article>
       </div>
       <div class="stats extra">
         <article class="stat"><small>Restant</small><strong>{{ fmtPts(guide.metrics.points.remaining) }}</strong></article>
-        <article class="stat"><small>Ajoutés en cours</small><strong>{{ fmtPts(guide.metrics.points.added) }}</strong></article>
+        <article class="stat"><small>Livrés au total</small><strong>{{ fmtPts(guide.metrics.points.completed) }}</strong></article>
+        <article class="stat">
+          <small>Ajoutés en cours</small>
+          <strong>{{ fmtPts(guide.metrics.points.added) }}</strong>
+          <em>{{ fmtPts(guide.metrics.points.completedAdded ?? 0) }} livrés</em>
+        </article>
         <article class="stat"><small>Périmètre actuel</small><strong>{{ fmtPts(guide.metrics.points.committed) }}</strong></article>
         <article class="stat"><small>Tickets done</small><strong>{{ guide.metrics.issues.done }}/{{ guide.metrics.issues.total }}</strong><em>{{ guide.metrics.issues.donePct }}%</em></article>
         <article class="stat"><small>En cours</small><strong>{{ guide.metrics.issues.inProgress }}</strong></article>
@@ -122,7 +127,7 @@
 
     <section v-if="guide" class="panel people">
       <p class="kicker">Contributeurs</p>
-      <p class="lede">40 cartes à 100 % de tes points de début de sprint. Les jours absents se règlent ici. Un Épique si l’équipe a livré plus de points que le sprint précédent.</p>
+      <p class="lede">40 cartes à 100 % de tes points de début. Les tickets ajoutés en cours livrés rapportent des cartes en plus, au même tarif. Un Épique si l’équipe a livré plus de points que le sprint précédent.</p>
       <article v-for="row in guide.contributors" :key="row.personKey" class="person">
         <div class="who">
           <strong>{{ row.username || row.jiraName }}</strong>
@@ -140,8 +145,8 @@
           <small>/ {{ row.daysDefault }} j par défaut</small>
         </label>
         <div class="jira">
-          <span>{{ fmtPts(row.storyPoints) }}/{{ fmtPts(row.storyPointsStart ?? row.storyPointsCommitted ?? row.storyPoints) }} pts début</span>
-          <span v-if="row.storyPointsAdded">+{{ fmtPts(row.storyPointsAdded) }} en cours</span>
+          <span>{{ fmtPts(row.storyPointsDoneStart ?? row.storyPoints) }}/{{ fmtPts(row.storyPointsStart ?? row.storyPointsCommitted ?? row.storyPoints) }} pts début</span>
+          <span v-if="row.storyPointsAdded">+{{ fmtPts(row.storyPointsDoneAdded ?? 0) }}/{{ fmtPts(row.storyPointsAdded) }} en cours</span>
           <span>{{ row.completionPct ?? 0 }}%</span>
           <span>{{ row.issuesDone }}/{{ row.issuesTotal }} tickets</span>
           <span v-if="row.deltaPoints != null" :class="deltaClass(row.deltaPoints)">
@@ -152,6 +157,7 @@
         </div>
         <p v-if="row.suggestedPacks.length" class="packs">
           {{ row.suggestedPacks.map((pack) => `${pack.quantity}× ${pack.name}`).join(' · ') }}
+          <small v-if="row.suggestedPacks[0]?.reason">{{ row.suggestedPacks[0].reason }}</small>
         </p>
       </article>
     </section>
@@ -422,6 +428,7 @@ onMounted(load);
 .days input { width: 100%; }
 .jira, .packs { display: flex; gap: 10px; flex-wrap: wrap; color: var(--gold-2); font-size: 0.86rem; }
 .packs { color: var(--muted); margin: 0; }
+.packs small { flex: 1 0 100%; }
 .people .lede { margin-bottom: 12px; }
 @media (max-width: 980px) {
   .sprint-bar, .point-compare, .stats, .compare-grid, .stats.extra { grid-template-columns: 1fr; }

@@ -245,6 +245,8 @@ export interface SprintContributor {
   storyPointsCommitted?: number;
   storyPointsStart?: number;
   storyPointsAdded?: number;
+  storyPointsDoneStart?: number;
+  storyPointsDoneAdded?: number;
   completionPct?: number;
   daysPresent: number;
   daysDefault: number;
@@ -274,6 +276,8 @@ export interface SprintMetrics {
     remaining: number;
     added: number;
     startCommitted: number;
+    completedStart?: number;
+    completedAdded?: number;
     startPct: number;
     endPct: number;
   };
