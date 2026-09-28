@@ -97,10 +97,6 @@ h1, h2, h3, .display { font-family: Cinzel, serif; letter-spacing: 0.04em; margi
 }
 .hub-card h2 { font-size: 1.45rem; line-height: 1.2; }
 .hub-card .lede { margin: 0; max-width: none; font-size: 1.02rem; line-height: 1.45; }
-.hub-card.collectors {
-  min-height: 200px;
-  grid-column: 1 / -1;
-}
 .hub-card:hover { border-color: color-mix(in srgb, var(--gold) 55%, var(--line)); }
 
 label { display: flex; flex-direction: column; gap: 6px; font-size: 0.82rem; color: var(--muted); }

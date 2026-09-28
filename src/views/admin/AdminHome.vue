@@ -23,9 +23,13 @@
         <h2>Boosters</h2>
         <p class="lede">Rareté moyenne, édition, chances brillantes et d’animation.</p>
       </RouterLink>
-      <RouterLink class="hub-card panel collectors" to="/admin/users">
+      <RouterLink class="hub-card panel" to="/admin/users">
         <h2>Collectionneurs</h2>
-        <p class="lede">Offrir des boosters à un compte, plusieurs paquets à la fois.</p>
+        <p class="lede">Choisis les comptes, puis les boosters à leur offrir.</p>
+      </RouterLink>
+      <RouterLink class="hub-card panel" to="/admin/jira">
+        <h2>Sprint Jira</h2>
+        <p class="lede">Points livrés, rythme du sprint et suggestions de cartes.</p>
       </RouterLink>
     </div>
   </AppShell>

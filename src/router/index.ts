@@ -20,6 +20,7 @@ const router = createRouter({
     { path: '/admin/cards/:id', component: () => import('@/views/admin/AdminCardForm.vue'), meta: { auth: true, admin: true } },
     { path: '/admin/boosters', component: () => import('@/views/admin/AdminBoosters.vue'), meta: { auth: true, admin: true } },
     { path: '/admin/users', component: () => import('@/views/admin/AdminUsers.vue'), meta: { auth: true, admin: true } },
+    { path: '/admin/jira', component: () => import('@/views/admin/AdminJira.vue'), meta: { auth: true, admin: true } },
   ],
 });
 
