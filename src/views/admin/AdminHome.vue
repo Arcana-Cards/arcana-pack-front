@@ -25,7 +25,7 @@
       </RouterLink>
       <RouterLink class="hub-card panel" to="/admin/users">
         <h2>Collectionneurs</h2>
-        <p class="lede">Choisis les comptes, puis les boosters à leur offrir.</p>
+        <p class="lede">Choisis les comptes et offre des boosters à chacun, ou à toute la liste.</p>
       </RouterLink>
       <RouterLink class="hub-card panel" to="/admin/jira">
         <h2>Sprint Jira</h2>

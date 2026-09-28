@@ -3,7 +3,7 @@
     <div class="page-head">
       <div>
         <h1>Collectionneurs</h1>
-        <p class="lede">Ajoute des comptes, choisis les boosters, puis offre le même lot à toute la liste.</p>
+        <p class="lede">Ajoute des comptes, compose un lot par personne, puis offre à un seul ou à toute la liste.</p>
       </div>
       <RouterLink class="btn" to="/admin">Atelier</RouterLink>
     </div>
@@ -19,14 +19,28 @@
       </label>
     </section>
 
-    <div class="layout">
-      <section class="panel people">
-        <div class="table-head">
+    <section class="panel people">
+      <div class="table-head">
+        <div>
           <p class="kicker">Liste d’attribution</p>
-          <button v-if="selected.length" class="btn" type="button" @click="selected = []">Vider</button>
+          <p class="lede summary">{{ selected.length }} compte{{ selected.length > 1 ? 's' : '' }} · {{ allPendingBoosters }} booster{{ allPendingBoosters > 1 ? 's' : '' }} à offrir</p>
         </div>
-        <p v-if="!selected.length" class="lede empty">Aucun compte choisi. Ajoute-les avec le menu.</p>
-        <article v-for="person in selected" :key="person.id" class="person">
+        <div class="actions">
+          <button v-if="selected.length" class="btn" type="button" @click="clearList">Vider</button>
+          <button
+            class="btn primary"
+            type="button"
+            :disabled="!allPendingList.length || busy !== null"
+            @click="grantAll"
+          >
+            {{ busy === 'all' ? 'Envoi…' : 'Offrir pour tous' }}
+          </button>
+        </div>
+      </div>
+      <p v-if="!selected.length" class="lede empty">Aucun compte choisi. Ajoute-les avec le menu.</p>
+      <p v-if="message" :class="ok ? 'ok' : 'error'">{{ message }}</p>
+      <article v-for="person in selected" :key="person.id" class="person">
+        <div class="person-head">
           <div class="identity">
             <strong>{{ person.username }}</strong>
             <small>{{ person.email }}</small>
@@ -36,32 +50,39 @@
             <span>{{ person.unopenedBoosters || 0 }} booster{{ (person.unopenedBoosters || 0) > 1 ? 's' : '' }} non ouvert{{ (person.unopenedBoosters || 0) > 1 ? 's' : '' }}</span>
           </div>
           <button class="btn" type="button" @click="removePerson(person.id)">Retirer</button>
-        </article>
-      </section>
-
-      <aside class="panel tray">
-        <p class="kicker">Boosters pour la liste</p>
-        <h2>{{ selected.length }} compte{{ selected.length > 1 ? 's' : '' }}</h2>
-        <p class="lede">{{ pendingBoosters }} booster{{ pendingBoosters > 1 ? 's' : '' }} · ≈ {{ pendingCards }} cartes par personne</p>
+        </div>
         <div class="pack-list">
           <label
             v-for="pack in grantTemplates"
             :key="pack.id"
             class="pack-pick"
-            :class="{ on: Number(qty[pack.id] || 0) > 0 }"
+            :class="{ on: qtyFor(person.id, pack.id) > 0 }"
           >
             <img v-if="pack.artUrl" :src="mediaUrl(pack.artUrl)" alt="" />
             <span>{{ pack.name }}</span>
             <small>{{ pack.cardCount }} cartes</small>
-            <input v-model.number="qty[pack.id]" type="number" min="0" max="50" />
+            <input
+              :value="qtyFor(person.id, pack.id)"
+              type="number"
+              min="0"
+              max="50"
+              @input="onQtyInput(person.id, pack.id, $event)"
+            />
           </label>
         </div>
-        <button class="btn primary" type="button" :disabled="!pendingList.length || busy" @click="grantSelected">
-          {{ busy ? 'Envoi…' : `Offrir à ${selected.length || 0} compte${selected.length > 1 ? 's' : ''}` }}
-        </button>
-        <p v-if="message" :class="ok ? 'ok' : 'error'">{{ message }}</p>
-      </aside>
-    </div>
+        <div class="person-foot">
+          <p class="lede">{{ pendingBoosters(person.id) }} booster{{ pendingBoosters(person.id) > 1 ? 's' : '' }} · ≈ {{ pendingCards(person.id) }} cartes</p>
+          <button
+            class="btn primary"
+            type="button"
+            :disabled="!packsFor(person.id).length || busy !== null"
+            @click="grantPerson(person)"
+          >
+            {{ busy === person.id ? 'Envoi…' : 'Offrir' }}
+          </button>
+        </div>
+      </article>
+    </section>
   </AppShell>
 </template>
 
@@ -74,8 +95,8 @@ import type { BoosterTemplate, User } from '@/types';
 const users = ref<User[]>([]);
 const templates = ref<BoosterTemplate[]>([]);
 const selected = ref<User[]>([]);
-const qty = reactive<Record<number, number>>({});
-const busy = ref(false);
+const qty = reactive<Record<number, Record<number, number>>>({});
+const busy = ref<number | 'all' | null>(null);
 const message = ref('');
 const ok = ref(false);
 
@@ -87,35 +108,91 @@ const availableUsers = computed(() => {
   const taken = new Set(selected.value.map((person) => person.id));
   return users.value.filter((person) => !taken.has(person.id));
 });
-const pendingPacks = computed(() => grantTemplates.value
-  .map((pack) => ({ templateId: pack.id, quantity: Math.max(0, Math.floor(Number(qty[pack.id] || 0))) }))
-  .filter((item) => item.quantity > 0));
-const pendingList = computed(() => {
+const allPendingList = computed(() => grantsFor(selected.value.map((person) => person.id)));
+const allPendingBoosters = computed(() => allPendingList.value.reduce((sum, item) => sum + item.quantity, 0));
+
+function emptyQty() {
+  const row: Record<number, number> = {};
+  for (const pack of grantTemplates.value) row[pack.id] = 0;
+  return row;
+}
+
+function ensureQty(userId: number) {
+  if (!qty[userId]) qty[userId] = emptyQty();
+  for (const pack of grantTemplates.value) {
+    if (qty[userId][pack.id] === undefined) qty[userId][pack.id] = 0;
+  }
+  return qty[userId];
+}
+
+function qtyFor(userId: number, templateId: number) {
+  return Number(qty[userId]?.[templateId] || 0);
+}
+
+function setQty(userId: number, templateId: number, value: number) {
+  const row = ensureQty(userId);
+  row[templateId] = Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
+}
+
+function onQtyInput(userId: number, templateId: number, event: Event) {
+  setQty(userId, templateId, Number((event.target as HTMLInputElement).value));
+}
+
+function packsFor(userId: number) {
+  return grantTemplates.value
+    .map((pack) => ({
+      templateId: pack.id,
+      quantity: Math.max(0, Math.floor(qtyFor(userId, pack.id))),
+    }))
+    .filter((item) => item.quantity > 0);
+}
+
+function grantsFor(userIds: number[]) {
   const grants: Array<{ userId: number; templateId: number; quantity: number }> = [];
-  for (const person of selected.value) {
-    for (const pack of pendingPacks.value) {
-      grants.push({ userId: person.id, templateId: pack.templateId, quantity: pack.quantity });
+  for (const userId of userIds) {
+    for (const pack of packsFor(userId)) {
+      grants.push({ userId, templateId: pack.templateId, quantity: pack.quantity });
     }
   }
   return grants;
-});
-const pendingBoosters = computed(() => pendingPacks.value.reduce((sum, item) => sum + item.quantity, 0));
-const pendingCards = computed(() => pendingPacks.value.reduce((sum, item) => {
-  const pack = templates.value.find((row) => row.id === item.templateId);
-  return sum + item.quantity * (pack?.cardCount || 0);
-}, 0));
+}
+
+function pendingBoosters(userId: number) {
+  return packsFor(userId).reduce((sum, item) => sum + item.quantity, 0);
+}
+
+function pendingCards(userId: number) {
+  return packsFor(userId).reduce((sum, item) => {
+    const pack = templates.value.find((row) => row.id === item.templateId);
+    return sum + item.quantity * (pack?.cardCount || 0);
+  }, 0);
+}
+
+function resetQty(userIds: number[]) {
+  for (const userId of userIds) {
+    const row = ensureQty(userId);
+    for (const pack of grantTemplates.value) row[pack.id] = 0;
+  }
+}
 
 function addPicked(event: Event) {
   const id = Number((event.target as HTMLSelectElement).value);
   const person = users.value.find((item) => item.id === id);
   if (person && !selected.value.some((item) => item.id === person.id)) {
     selected.value = [...selected.value, person];
+    ensureQty(person.id);
   }
   (event.target as HTMLSelectElement).value = '0';
 }
 
 function removePerson(id: number) {
   selected.value = selected.value.filter((person) => person.id !== id);
+  delete qty[id];
+}
+
+function clearList() {
+  selected.value = [];
+  for (const key of Object.keys(qty)) delete qty[Number(key)];
 }
 
 async function load() {
@@ -127,29 +204,48 @@ async function load() {
   users.value = people;
   templates.value = packs;
   selected.value = people.filter((person) => ids.has(person.id));
-  for (const pack of packs) {
-    if (qty[pack.id] === undefined) qty[pack.id] = 0;
-  }
+  for (const person of selected.value) ensureQty(person.id);
 }
 
-async function grantSelected() {
-  if (!pendingList.value.length) return;
-  busy.value = true;
+async function sendGrants(grants: Array<{ userId: number; templateId: number; quantity: number }>, userIds: number[]) {
+  if (!grants.length) return;
   message.value = '';
   try {
     await api('/admin/users/boosters/batch', {
       method: 'POST',
-      body: JSON.stringify({ grants: pendingList.value }),
+      body: JSON.stringify({ grants }),
     });
+    const total = grants.reduce((sum, item) => sum + item.quantity, 0);
     ok.value = true;
-    message.value = `${pendingBoosters.value * selected.value.length} booster${pendingBoosters.value * selected.value.length > 1 ? 's' : ''} envoyé${pendingBoosters.value * selected.value.length > 1 ? 's' : ''}.`;
-    for (const pack of grantTemplates.value) qty[pack.id] = 0;
+    message.value = `${total} booster${total > 1 ? 's' : ''} envoyé${total > 1 ? 's' : ''}.`;
+    resetQty(userIds);
     await load();
   } catch (err) {
     ok.value = false;
     message.value = err instanceof ApiError || err instanceof Error ? err.message : 'Envoi impossible';
+  }
+}
+
+async function grantPerson(person: User) {
+  const grants = grantsFor([person.id]);
+  if (!grants.length) return;
+  busy.value = person.id;
+  try {
+    await sendGrants(grants, [person.id]);
   } finally {
-    busy.value = false;
+    busy.value = null;
+  }
+}
+
+async function grantAll() {
+  const grants = allPendingList.value;
+  if (!grants.length) return;
+  const userIds = [...new Set(grants.map((item) => item.userId))];
+  busy.value = 'all';
+  try {
+    await sendGrants(grants, userIds);
+  } finally {
+    busy.value = null;
   }
 }
 
@@ -166,27 +262,38 @@ onMounted(load);
 }
 .pick { margin-bottom: 18px; }
 .pick label { max-width: 520px; }
-.layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(260px, .7fr);
-  gap: 16px;
-  align-items: start;
+.table-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
 }
-.table-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.table-head .summary { margin: 4px 0 0; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .person {
+  border-top: 1px solid var(--line);
+  padding: 16px 0;
+  display: grid;
+  gap: 12px;
+}
+.person-head {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto;
   gap: 12px;
   align-items: center;
-  border-top: 1px solid var(--line);
-  padding: 14px 0;
 }
 .identity small, .empty { color: var(--muted); }
 .identity small { display: block; font-size: 0.82rem; }
 .stats { display: flex; flex-wrap: wrap; gap: 10px; color: var(--gold-2); font-size: 0.86rem; }
-.tray { position: sticky; top: 86px; }
-.tray h2 { margin: 6px 0 0; }
-.pack-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 14px 0; }
+.person-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.person-foot .lede { margin: 0; white-space: nowrap; }
+.pack-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
 .pack-pick {
   border: 1px solid var(--line);
   background: #0c0914;
@@ -203,7 +310,7 @@ onMounted(load);
 .pack-pick input { width: 100%; }
 .ok { color: var(--ok); }
 @media (max-width: 980px) {
-  .layout, .person { grid-template-columns: 1fr; }
-  .tray { position: static; }
+  .table-head, .person-head, .person-foot { grid-template-columns: 1fr; }
+  .person-foot { flex-direction: column; align-items: stretch; }
 }
 </style>
