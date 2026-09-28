@@ -243,6 +243,8 @@ export interface SprintContributor {
   issuesTotal: number;
   storyPoints: number;
   storyPointsCommitted?: number;
+  storyPointsStart?: number;
+  storyPointsAdded?: number;
   completionPct?: number;
   daysPresent: number;
   daysDefault: number;
@@ -271,6 +273,7 @@ export interface SprintMetrics {
     completed: number;
     remaining: number;
     added: number;
+    startCommitted: number;
     startPct: number;
     endPct: number;
   };
@@ -298,6 +301,7 @@ export interface SprintComparison {
   previous: SprintMetrics['sprint'];
   points: { current: number; previous: number; delta: number };
   committed: { current: number; previous: number; delta: number };
+  added: { current: number; previous: number; delta: number };
   endPct: { current: number; previous: number; delta: number };
   issuesDone: { current: number; previous: number; delta: number };
   pointsPerDay: { current: number; previous: number; delta: number };
