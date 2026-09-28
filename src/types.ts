@@ -121,6 +121,7 @@ export interface User {
   lastLogin?: string | null;
   unopenedBoosters?: number;
   collectedCopies?: number;
+  sprintDays?: number | null;
 }
 
 export interface Universe {
@@ -232,6 +233,7 @@ export interface SuggestedPack {
 }
 
 export interface SprintContributor {
+  personKey: string;
   jiraName: string;
   jiraEmail: string | null;
   userId: number | null;
@@ -242,6 +244,15 @@ export interface SprintContributor {
   storyPoints: number;
   storyPointsCommitted?: number;
   completionPct?: number;
+  daysPresent: number;
+  daysDefault: number;
+  pointsPerDay: number;
+  previousPoints: number | null;
+  previousDays: number | null;
+  previousPerDay: number | null;
+  deltaPoints: number | null;
+  deltaPerDay: number | null;
+  compareBonus: number;
   suggestedCards: number;
   suggestedPacks: SuggestedPack[];
 }
@@ -277,9 +288,19 @@ export interface SprintMetrics {
   time: {
     elapsedPct: number;
     daysTotal: number;
+    workingDays: number;
     daysLeft: number;
     ahead: boolean | null;
   };
+}
+
+export interface SprintComparison {
+  previous: SprintMetrics['sprint'];
+  points: { current: number; previous: number; delta: number };
+  committed: { current: number; previous: number; delta: number };
+  endPct: { current: number; previous: number; delta: number };
+  issuesDone: { current: number; previous: number; delta: number };
+  pointsPerDay: { current: number; previous: number; delta: number };
 }
 
 export interface SprintRewardGuide {
@@ -292,6 +313,7 @@ export interface SprintRewardGuide {
     matched: number;
   };
   metrics?: SprintMetrics;
+  comparison?: SprintComparison | null;
   contributors: SprintContributor[];
 }
 
