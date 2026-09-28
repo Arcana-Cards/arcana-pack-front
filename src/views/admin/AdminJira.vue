@@ -30,12 +30,13 @@
           </select>
         </label>
         <button
-          v-if="sprints.length > visibleCount"
+          v-if="canLoadMore"
           class="btn"
           type="button"
+          :disabled="loadingSprints"
           @click="loadMore"
         >
-          Charger 20 de plus ({{ visibleSprints.length }}/{{ sprints.length }})
+          {{ loadingSprints ? 'Chargement…' : `Charger plus (${visibleSprints.length}${loadedAll ? `/${sprints.length}` : ''})` }}
         </button>
         <button class="btn" type="button" :disabled="!sprintId || loadingJira" @click="loadRewards">
           {{ loadingJira ? 'Lecture…' : 'Lire le sprint' }}
@@ -117,7 +118,7 @@
       <p class="kicker">Contributeurs</p>
       <p class="lede">Les jours absents de Jira se règlent ici. La suggestion compare le rythme (pts/jour) au sprint précédent.</p>
       <article v-for="row in guide.contributors" :key="row.personKey" class="person">
-        <div>
+        <div class="who">
           <strong>{{ row.username || row.jiraName }}</strong>
           <small>{{ row.userId ? 'Compte Anacra' : 'Pas de compte Anacra' }}</small>
         </div>
@@ -159,10 +160,13 @@ import AppShell from '@/components/AppShell.vue';
 import { api, ApiError } from '@/api/client';
 import type { BoosterTemplate, JiraSprint, JiraStatus, SprintContributor, SprintRewardGuide, SuggestedPack } from '@/types';
 
+const INITIAL = 2;
 const PAGE = 20;
 const templates = ref<BoosterTemplate[]>([]);
 const sprints = ref<JiraSprint[]>([]);
-const visibleCount = ref(PAGE);
+const visibleCount = ref(INITIAL);
+const loadedAll = ref(false);
+const loadingSprints = ref(false);
 const guide = ref<SprintRewardGuide | null>(null);
 const jira = ref<JiraStatus>({ configured: false, baseUrl: null, email: null, tokenSet: false, reachable: false, error: null });
 const sprintId = ref(0);
@@ -172,6 +176,7 @@ let saveTimer: ReturnType<typeof setTimeout> | null = null;
 
 const standardSize = computed(() => templates.value.find((pack) => pack.presetKey === 'standard')?.cardCount || 5);
 const visibleSprints = computed(() => sprints.value.slice(0, visibleCount.value));
+const canLoadMore = computed(() => !loadedAll.value || visibleCount.value < sprints.value.length);
 const activeSprint = computed(() => sprints.value.find((sprint) => sprint.id === sprintId.value) || null);
 const sprintDates = computed(() => {
   const sprint = guide.value?.metrics?.sprint || activeSprint.value;
@@ -220,7 +225,21 @@ function deltaClass(value: number) {
 }
 
 function loadMore() {
-  visibleCount.value += PAGE;
+  void (async () => {
+    if (!loadedAll.value) {
+      loadingSprints.value = true;
+      try {
+        sprints.value = await api<JiraSprint[]>('/admin/jira/sprints');
+        loadedAll.value = true;
+      } catch (err) {
+        jiraError.value = err instanceof ApiError || err instanceof Error ? err.message : 'Sprints illisibles';
+        return;
+      } finally {
+        loadingSprints.value = false;
+      }
+    }
+    visibleCount.value = Math.min(sprints.value.length, Math.max(INITIAL, visibleCount.value) + PAGE);
+  })();
 }
 
 function suggestPacks(points: number, issuesDone: number): { cards: number; packs: SuggestedPack[] } {
@@ -317,8 +336,9 @@ async function load() {
   jira.value = status;
   if (!status.configured) return;
   try {
-    sprints.value = await api<JiraSprint[]>('/admin/jira/sprints');
-    visibleCount.value = PAGE;
+    sprints.value = await api<JiraSprint[]>('/admin/jira/sprints?newest=2');
+    loadedAll.value = false;
+    visibleCount.value = INITIAL;
     const active = sprints.value.find((sprint) => sprint.state === 'active') || sprints.value[0];
     if (active && !sprintId.value) {
       sprintId.value = active.id;
@@ -375,7 +395,7 @@ onMounted(load);
   font-size: 1.45rem;
   font-family: Cinzel, serif;
 }
-.compare-grid small, .compare-grid em, .stat small, .stat em, .person small {
+.compare-grid small, .compare-grid em, .stat small, .stat em, .who small {
   color: var(--muted);
   font-style: normal;
 }
@@ -415,6 +435,15 @@ onMounted(load);
   padding: 14px 0;
   display: grid;
   gap: 8px;
+}
+.who {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.who small {
+  display: block;
+  font-size: 0.82rem;
 }
 .days {
   max-width: 220px;

@@ -3,7 +3,7 @@
     <div class="page-head">
       <div>
         <h1>Collectionneurs</h1>
-        <p class="lede">Ajoute des comptes, choisis les boosters, puis offre le même lot à toute la liste. Les jours / sprint servent de défaut quand une absence n’est pas dans Jira.</p>
+        <p class="lede">Ajoute des comptes, choisis les boosters, puis offre le même lot à toute la liste.</p>
       </div>
       <RouterLink class="btn" to="/admin">Atelier</RouterLink>
     </div>
@@ -35,17 +35,6 @@
             <span>{{ person.collectedCopies || 0 }} carte{{ (person.collectedCopies || 0) > 1 ? 's' : '' }}</span>
             <span>{{ person.unopenedBoosters || 0 }} booster{{ (person.unopenedBoosters || 0) > 1 ? 's' : '' }} non ouvert{{ (person.unopenedBoosters || 0) > 1 ? 's' : '' }}</span>
           </div>
-          <label class="days">Jours / sprint
-            <input
-              type="number"
-              min="0"
-              max="31"
-              step="0.5"
-              :value="person.sprintDays ?? ''"
-              placeholder="—"
-              @change="saveSprintDays(person, $event)"
-            />
-          </label>
           <button class="btn" type="button" @click="removePerson(person.id)">Retirer</button>
         </article>
       </section>
@@ -129,23 +118,6 @@ function removePerson(id: number) {
   selected.value = selected.value.filter((person) => person.id !== id);
 }
 
-async function saveSprintDays(person: User, event: Event) {
-  const raw = (event.target as HTMLInputElement).value;
-  const sprintDays = raw === '' ? null : Number(raw);
-  try {
-    const updated = await api<User>(`/admin/users/${person.id}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ sprintDays }),
-    });
-    const nextDays = updated.sprintDays ?? null;
-    users.value = users.value.map((item) => (item.id === person.id ? { ...item, sprintDays: nextDays } : item));
-    selected.value = selected.value.map((item) => (item.id === person.id ? { ...item, sprintDays: nextDays } : item));
-  } catch (err) {
-    ok.value = false;
-    message.value = err instanceof ApiError || err instanceof Error ? err.message : 'Jours non enregistrés';
-  }
-}
-
 async function load() {
   const ids = new Set(selected.value.map((person) => person.id));
   const [people, packs] = await Promise.all([
@@ -203,13 +175,12 @@ onMounted(load);
 .table-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
 .person {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) 120px auto;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto;
   gap: 12px;
   align-items: center;
   border-top: 1px solid var(--line);
   padding: 14px 0;
 }
-.days input { width: 100%; }
 .identity small, .empty { color: var(--muted); }
 .identity small { display: block; font-size: 0.82rem; }
 .stats { display: flex; flex-wrap: wrap; gap: 10px; color: var(--gold-2); font-size: 0.86rem; }
