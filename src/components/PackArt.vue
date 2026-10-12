@@ -154,7 +154,7 @@ function onUp() {
   if (!tearing.value) return;
   tearing.value = false;
   bindMove(false);
-  if (pull.value >= THRESHOLD) {
+  if (pull.value >= THRESHOLD || pull.value < 10) {
     finishTear();
     return;
   }

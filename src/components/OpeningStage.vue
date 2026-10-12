@@ -12,6 +12,9 @@
         :art-url="booster.artUrl"
         @open="$emit('rip')"
       />
+      <button class="btn primary open-pack" type="button" :disabled="ripping" @click="$emit('rip')">
+        {{ ripping ? 'Ouverture…' : 'Ouvrir le paquet' }}
+      </button>
     </div>
     <div
       v-else
@@ -28,7 +31,7 @@
         :key="pull.id"
         class="slot"
         type="button"
-        :class="{ active: index === current, done: index < current, hidden: index > current }"
+        :class="{ active: index === current, done: index < current, hidden: index > current, zoom: allOpened }"
         :style="slotStyle(index)"
         @click="onSlotClick(index)"
       >
@@ -41,21 +44,31 @@
         />
         <div v-if="index <= current" class="slot-odds">
           <span v-if="pull.isNew" class="badge r-legendary">Nouvelle</span>
-          <span class="odds" :class="luckClass(pull.dropChance)">{{ formatChance(pull.dropChance) }}</span>
+          <span class="odds" :class="`r-${pull.card.rarity}`">{{ formatChance(pull) }}</span>
         </div>
       </button>
     </div>
-    <p v-if="current >= pulls.length - 1 && pulls.length" class="done-msg">
-      Tes cartes sont dans la pile. Range-les dans le cahier, ou ouvre un autre booster.
+    <p v-if="allOpened" class="done-msg">
+      Clique une carte pour l’agrandir. Range-les ensuite dans le cahier, ou ouvre un autre booster.
     </p>
+    <CardLightbox
+      :card="inspected?.card ?? null"
+      :foil="inspected?.foil"
+      :foil-badge="inspected?.foil"
+      :animated="inspected?.animated"
+      :owned-copies="inspected?.copies"
+      @close="inspected = null"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+import CardLightbox from '@/components/CardLightbox.vue';
 import PackArt from '@/components/PackArt.vue';
 import TradingCard from '@/components/TradingCard.vue';
 import type { PulledCopy, UserBooster } from '@/types';
+import { RARITY_LABELS } from '@/types';
 import { playCardFlip, playFoilShimmer, playRareReveal } from '@/audio/packSounds';
 
 const props = defineProps<{
@@ -69,12 +82,14 @@ const emit = defineEmits<{ rip: []; next: [] }>();
 const canvas = ref<HTMLCanvasElement | null>(null);
 const revealsEl = ref<HTMLElement | null>(null);
 const shake = ref(false);
+const inspected = ref<PulledCopy | null>(null);
 const layout = reactive({ cardW: 168, cardH: 240 });
 let raf = 0;
 let particles: Array<{ x: number; y: number; vx: number; vy: number; life: number; color: string }> = [];
 let resizeObs: ResizeObserver | null = null;
 
 const currentPull = computed(() => props.pulls[props.current]);
+const allOpened = computed(() => props.pulls.length > 0 && props.current >= props.pulls.length - 1);
 const fxClass = computed(() => currentPull.value && props.current >= 0 ? `fx-${currentPull.value.card.rarity}` : '');
 
 function computeLayout() {
@@ -106,6 +121,10 @@ function slotStyle(index: number) {
 }
 
 function onSlotClick(index: number) {
+  if (allOpened.value && index <= props.current) {
+    inspected.value = props.pulls[index];
+    return;
+  }
   if (index === props.current + 1) emit('next');
 }
 
@@ -186,21 +205,11 @@ onBeforeUnmount(() => {
   resizeObs?.disconnect();
 });
 
-function formatChance(value: number | undefined) {
-  const n = Number(value);
-  if (!Number.isFinite(n) || n <= 0) return '—';
-  if (n >= 10) return `${Math.round(n)} %`;
-  if (n >= 1) return `${n.toFixed(1).replace('.', ',')} %`;
-  if (n >= 0.1) return `${n.toFixed(2).replace('.', ',')} %`;
-  return `${n.toFixed(3).replace('.', ',')} %`;
-}
-
-function luckClass(value: number | undefined) {
-  const n = Number(value);
-  if (n < 2) return 'hot';
-  if (n < 6) return 'lucky';
-  if (n < 15) return 'nice';
-  return 'common-odds';
+function formatChance(pull: PulledCopy) {
+  const n = Math.round(Number(pull.dropChance));
+  const label = RARITY_LABELS[pull.card.rarity];
+  if (!Number.isFinite(n) || n < 0) return label;
+  return `${label} · ${n} %`;
 }
 </script>
 
@@ -217,7 +226,8 @@ function luckClass(value: number | undefined) {
 }
 .stage.lined { min-height: 0; }
 .fx { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-.idle { display: grid; place-items: center; height: 100%; min-height: 0; }
+.idle { display: grid; place-items: center; align-content: center; gap: 16px; height: 100%; min-height: 0; }
+.open-pack { z-index: 2; }
 .idle p, .done-msg { text-align: center; color: var(--muted); }
 .done-msg {
   position: absolute;
@@ -261,6 +271,7 @@ function luckClass(value: number | undefined) {
 .slot :deep(.badge) { font-size: 0.58rem; padding: 1px 5px; }
 .slot.hidden { filter: brightness(.92); }
 .slot.active { filter: none; }
+.slot.zoom { cursor: zoom-in; }
 .slot-odds {
   position: absolute;
   left: 50%;
@@ -285,9 +296,12 @@ function luckClass(value: number | undefined) {
   letter-spacing: .04em;
   color: var(--muted);
 }
-.odds.nice { color: #34d399; }
-.odds.lucky { color: #60a5fa; }
-.odds.hot { color: #fbbf24; }
+.odds.r-common { color: #94a3b8; }
+.odds.r-uncommon { color: #34d399; }
+.odds.r-rare { color: #60a5fa; }
+.odds.r-epic { color: #c084fc; }
+.odds.r-legendary { color: #fbbf24; }
+.odds.r-mythic { color: #fb7185; }
 .shake { animation: boom .45s ease; }
 .fx-rare { box-shadow: inset 0 0 80px rgba(96,165,250,.25); }
 .fx-epic { box-shadow: inset 0 0 100px rgba(192,132,252,.3); }

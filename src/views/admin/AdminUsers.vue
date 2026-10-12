@@ -49,7 +49,17 @@
             <span>{{ person.collectedCopies || 0 }} carte{{ (person.collectedCopies || 0) > 1 ? 's' : '' }}</span>
             <span>{{ person.unopenedBoosters || 0 }} booster{{ (person.unopenedBoosters || 0) > 1 ? 's' : '' }} non ouvert{{ (person.unopenedBoosters || 0) > 1 ? 's' : '' }}</span>
           </div>
-          <button class="btn" type="button" @click="removePerson(person.id)">Retirer</button>
+          <div class="person-actions">
+            <button
+              class="btn danger"
+              type="button"
+              :disabled="busy !== null || !(person.collectedCopies || 0)"
+              @click="punishPerson(person)"
+            >
+              {{ busy === `punish-${person.id}` ? 'Brûlure…' : 'Punir' }}
+            </button>
+            <button class="btn" type="button" @click="removePerson(person.id)">Retirer</button>
+          </div>
         </div>
         <div class="pack-list">
           <label
@@ -96,7 +106,7 @@ const users = ref<User[]>([]);
 const templates = ref<BoosterTemplate[]>([]);
 const selected = ref<User[]>([]);
 const qty = reactive<Record<number, Record<number, number>>>({});
-const busy = ref<number | 'all' | null>(null);
+const busy = ref<number | 'all' | `punish-${number}` | null>(null);
 const message = ref('');
 const ok = ref(false);
 
@@ -237,6 +247,26 @@ async function grantPerson(person: User) {
   }
 }
 
+async function punishPerson(person: User) {
+  if (!(person.collectedCopies || 0) || busy.value !== null) return;
+  if (!window.confirm(`Brûler une carte au hasard de ${person.username} ? Il la verra disparaître à sa prochaine connexion.`)) {
+    return;
+  }
+  busy.value = `punish-${person.id}`;
+  message.value = '';
+  try {
+    const burn = await api<{ card: { name: string } }>(`/admin/users/${person.id}/punish`, { method: 'POST' });
+    ok.value = true;
+    message.value = `${person.username} verra ${burn.card.name} brûler à sa prochaine connexion.`;
+    await load();
+  } catch (err) {
+    ok.value = false;
+    message.value = err instanceof ApiError || err instanceof Error ? err.message : 'Punition impossible';
+  } finally {
+    busy.value = null;
+  }
+}
+
 async function grantAll() {
   const grants = allPendingList.value;
   if (!grants.length) return;
@@ -286,6 +316,12 @@ onMounted(load);
 .identity small, .empty { color: var(--muted); }
 .identity small { display: block; font-size: 0.82rem; }
 .stats { display: flex; flex-wrap: wrap; gap: 10px; color: var(--gold-2); font-size: 0.86rem; }
+.person-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.btn.danger {
+  color: var(--danger);
+  border-color: rgba(251, 113, 133, .35);
+}
+.btn.danger:hover { border-color: var(--danger); color: #fecdd3; }
 .person-foot {
   display: flex;
   justify-content: space-between;

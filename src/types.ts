@@ -349,6 +349,14 @@ export interface PulledCopy {
   card: Card;
 }
 
+export interface CardBurn {
+  id: number;
+  foil: boolean;
+  animated: boolean;
+  serial: string;
+  card: Card;
+}
+
 export interface NotebookSummary {
   editionId: number;
   editionName: string;
