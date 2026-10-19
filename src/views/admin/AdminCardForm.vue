@@ -74,6 +74,7 @@
                 :disabled="aiBusy || !form.universeId || !form.editionId || !(form.artAnimatedUrl || form.artUrl)"
                 @click="fillWithAi"
               >{{ aiBusy ? 'L’IA écrit…' : 'Remplir avec l’IA' }}</button>
+              <button v-if="form.artAnimatedUrl || form.giphyUrl" class="btn" type="button" @click="clearGif">Retirer le GIF</button>
               <button v-if="form.artUrl || form.artAnimatedUrl || localArt" class="btn" type="button" @click="clearArt">Retirer les illustrations</button>
             </div>
             <details class="span-2 links-fold">
@@ -581,9 +582,7 @@ async function onAnimatedFile(event: Event) {
   }
 }
 
-function clearArt() {
-  if (localArt.value) URL.revokeObjectURL(localArt.value);
-  localArt.value = '';
+function resetGifPreview() {
   gifLoadToken += 1;
   gifStrip.value = null;
   gifFrameIndex.value = 0;
@@ -591,9 +590,30 @@ function clearArt() {
   gifLoading.value = false;
   revokeStill();
   stillDirty.value = false;
+}
+
+function stillFromUrl(url: string): string {
+  const id = giphyIdFromUrl(url);
+  return id ? giphyStillUrl(id) : url;
+}
+
+function clearGif() {
+  const still = form.value.artUrl || form.value.artAnimatedUrl;
+  form.value.artUrl = still ? stillFromUrl(still) : '';
+  form.value.artAnimatedUrl = '';
+  form.value.giphyUrl = '';
+  form.value.animated = false;
+  resetGifPreview();
+}
+
+function clearArt() {
+  if (localArt.value) URL.revokeObjectURL(localArt.value);
+  localArt.value = '';
   form.value.artUrl = '';
   form.value.artAnimatedUrl = '';
   form.value.giphyUrl = '';
+  form.value.animated = false;
+  resetGifPreview();
 }
 
 async function save() {
@@ -618,7 +638,8 @@ async function save() {
       collectorNumber: 0,
       artUrl: form.value.artUrl || null,
       artAnimatedUrl: form.value.artAnimatedUrl || null,
-      giphyUrl: form.value.giphyUrl || form.value.artAnimatedUrl || null,
+      giphyUrl: form.value.artAnimatedUrl ? (form.value.giphyUrl || form.value.artAnimatedUrl) : null,
+      animated: Boolean(form.value.artAnimatedUrl),
       subtitle: form.value.subtitle || null,
       description: form.value.description || null,
       flavorText: form.value.flavorText || null,

@@ -28,6 +28,14 @@ export function giphyStillUrl(id: string): string {
   return `https://media.giphy.com/media/${id}/giphy_s.gif`;
 }
 
+export function isAnimatedArtUrl(raw: string | null | undefined): boolean {
+  if (!raw?.trim()) return false;
+  const value = raw.trim();
+  if (/giphy_s|_s\.gif/i.test(value)) return false;
+  if (giphyIdFromUrl(value)) return true;
+  return /\.gif(\?|#|$)/i.test(value);
+}
+
 export function resolveArtSrc(raw: string | null | undefined, animated = false): string {
   if (!raw) return '';
   const id = giphyIdFromUrl(raw);

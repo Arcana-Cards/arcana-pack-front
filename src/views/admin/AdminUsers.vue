@@ -3,10 +3,38 @@
     <div class="page-head">
       <div>
         <h1>Collectionneurs</h1>
-        <p class="lede">Ajoute des comptes, compose un lot par personne, puis offre à un seul ou à toute la liste.</p>
+        <p class="lede">Change email ou mot de passe, compose un lot par personne, puis offre à un seul ou à toute la liste.</p>
       </div>
       <RouterLink class="btn" to="/admin">Atelier</RouterLink>
     </div>
+
+    <section class="panel accounts">
+      <p class="kicker">Comptes</p>
+      <p class="lede">Email et mot de passe. Le mot de passe vide ne change rien.</p>
+      <p v-if="accountMessage" :class="accountOk ? 'ok' : 'error'">{{ accountMessage }}</p>
+      <article v-for="person in users" :key="person.id" class="account">
+        <div class="account-head">
+          <div class="identity">
+            <strong>{{ person.username }}</strong>
+            <small>{{ person.email }}</small>
+          </div>
+          <button class="btn" type="button" @click="toggleEdit(person)">
+            {{ editingId === person.id ? 'Fermer' : 'Modifier' }}
+          </button>
+        </div>
+        <form v-if="editingId === person.id" class="account-form" @submit.prevent="saveAccount(person)">
+          <label>Email
+            <input v-model="editEmail" type="email" required autocomplete="username" />
+          </label>
+          <label>Nouveau mot de passe
+            <input v-model="editPassword" type="password" minlength="6" autocomplete="new-password" placeholder="Laisser vide pour ne pas changer" />
+          </label>
+          <button class="btn primary" type="submit" :disabled="busy !== null">
+            {{ busy === `edit-${person.id}` ? 'Enregistrement…' : 'Enregistrer' }}
+          </button>
+        </form>
+      </article>
+    </section>
 
     <section class="panel pick">
       <label>Ajouter un collectionneur
@@ -106,9 +134,14 @@ const users = ref<User[]>([]);
 const templates = ref<BoosterTemplate[]>([]);
 const selected = ref<User[]>([]);
 const qty = reactive<Record<number, Record<number, number>>>({});
-const busy = ref<number | 'all' | `punish-${number}` | null>(null);
+const busy = ref<number | 'all' | `punish-${number}` | `edit-${number}` | null>(null);
 const message = ref('');
 const ok = ref(false);
+const editingId = ref<number | null>(null);
+const editEmail = ref('');
+const editPassword = ref('');
+const accountMessage = ref('');
+const accountOk = ref(false);
 
 const grantTemplates = computed(() => [
   ...templates.value.filter((pack) => pack.presetKey),
@@ -205,6 +238,47 @@ function clearList() {
   for (const key of Object.keys(qty)) delete qty[Number(key)];
 }
 
+function toggleEdit(person: User) {
+  accountMessage.value = '';
+  if (editingId.value === person.id) {
+    editingId.value = null;
+    editEmail.value = '';
+    editPassword.value = '';
+    return;
+  }
+  editingId.value = person.id;
+  editEmail.value = person.email;
+  editPassword.value = '';
+}
+
+async function saveAccount(person: User) {
+  const email = editEmail.value.trim();
+  const password = editPassword.value;
+  if (!email) return;
+  busy.value = `edit-${person.id}`;
+  accountMessage.value = '';
+  try {
+    const payload: { email: string; password?: string } = { email };
+    if (password) payload.password = password;
+    const updated = await api<User>(`/admin/users/${person.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+    accountOk.value = true;
+    accountMessage.value = password
+      ? `Compte de ${updated.username} mis à jour (email et mot de passe).`
+      : `Email de ${updated.username} mis à jour.`;
+    editingId.value = null;
+    editPassword.value = '';
+    await load();
+  } catch (err) {
+    accountOk.value = false;
+    accountMessage.value = err instanceof ApiError || err instanceof Error ? err.message : 'Mise à jour impossible';
+  } finally {
+    busy.value = null;
+  }
+}
+
 async function load() {
   const ids = new Set(selected.value.map((person) => person.id));
   const [people, packs] = await Promise.all([
@@ -290,6 +364,26 @@ onMounted(load);
   font-size: 0.72rem;
   color: var(--gold-2);
 }
+.accounts { margin-bottom: 18px; }
+.account {
+  border-top: 1px solid var(--line);
+  padding: 12px 0;
+  display: grid;
+  gap: 10px;
+}
+.account:first-of-type { border-top: 0; }
+.account-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.account-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+}
 .pick { margin-bottom: 18px; }
 .pick label { max-width: 520px; }
 .table-head {
@@ -346,7 +440,7 @@ onMounted(load);
 .pack-pick input { width: 100%; }
 .ok { color: var(--ok); }
 @media (max-width: 980px) {
-  .table-head, .person-head, .person-foot { grid-template-columns: 1fr; }
+  .table-head, .person-head, .person-foot, .account-form { grid-template-columns: 1fr; }
   .person-foot { flex-direction: column; align-items: stretch; }
 }
 </style>

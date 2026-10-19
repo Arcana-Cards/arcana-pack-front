@@ -17,7 +17,8 @@
 
     <p v-if="hint" class="hint">{{ hint }}</p>
 
-    <div v-if="data" class="cahier" :style="{ '--cover': data.summary.coverColor, '--accent': data.summary.accentColor }">
+    <div v-if="data" class="desk">
+    <div class="cahier" :style="{ '--cover': data.summary.coverColor, '--accent': data.summary.accentColor }">
       <div class="toolbar">
         <button class="btn" type="button" aria-label="Pages précédentes" :disabled="spread <= 0" @click="spread -= 1">◀</button>
         <span>Pages {{ leftPageNo }}–{{ rightPageNo }} / {{ lastPageNo }}</span>
@@ -129,7 +130,6 @@
     </div>
 
     <aside
-      v-if="data"
       class="pile"
       :class="{ over: pileOver, active: Boolean(selectedId) }"
       @dragover.prevent="pileOver = true"
@@ -175,6 +175,7 @@
       </div>
       <p v-else class="empty-pile">Toutes tes cartes de cette édition sont rangées dans le cahier.</p>
     </aside>
+    </div>
     <CardLightbox
       :card="inspected?.card ?? null"
       :foil="inspected?.foil"
@@ -410,7 +411,17 @@ async function unplace(copyId: number) {
   color: var(--gold-2);
   text-align: center;
 }
+.desk {
+  display: flex;
+  align-items: stretch;
+  gap: 16px;
+}
 .cahier {
+  flex: 1.7 1 0;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
   background:
     radial-gradient(circle at 20% 0%, color-mix(in srgb, var(--accent) 28%, transparent), transparent 46%),
     linear-gradient(180deg, color-mix(in srgb, var(--cover) 88%, #1a120c), #120c0a);
@@ -438,9 +449,11 @@ async function unplace(copyId: number) {
   display: grid;
   grid-template-columns: 1fr 28px 1fr;
   gap: 8px;
+  flex: 1 1 auto;
   min-height: 620px;
 }
 .sheet {
+  min-height: 100%;
   background:
     linear-gradient(90deg, rgba(80, 50, 30, .18), transparent 18px),
     repeating-linear-gradient(0deg, rgba(90, 60, 30, .05) 0 2px, transparent 2px 28px),
@@ -549,7 +562,12 @@ async function unplace(copyId: number) {
   border: 1px solid rgba(212, 175, 55, .35);
 }
 .pile {
-  margin-top: 18px;
+  flex: 0.72 1 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  min-width: 240px;
+  min-height: 0;
   background: rgba(12, 8, 18, .9);
   border: 1px solid var(--line);
   border-radius: 18px;
@@ -560,8 +578,12 @@ async function unplace(copyId: number) {
 .pile-head p { color: var(--muted); margin: 6px 0 0; }
 .pile-row {
   display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
   gap: 12px;
-  overflow-x: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
   padding: 14px 4px 6px;
 }
 .pile-card {
@@ -572,9 +594,11 @@ async function unplace(copyId: number) {
   border-radius: 12px;
 }
 .pile-card.selected { border-color: var(--gold); background: rgba(212, 175, 55, .08); }
-.empty-pile { color: var(--muted); margin: 12px 0 0; }
+.empty-pile { color: var(--muted); margin: 12px 0 0; flex: 1; }
 
 @media (max-width: 980px) {
+  .desk { flex-direction: column; }
+  .cahier, .pile { flex: 1 1 auto; min-width: 0; }
   .spread { grid-template-columns: 1fr; min-height: 0; }
   .spine { flex-direction: row; height: 24px; }
   .sheet, .sheet:last-child { border-radius: 12px; }

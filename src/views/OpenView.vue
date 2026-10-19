@@ -99,12 +99,12 @@ async function openPack() {
 }
 
 function delayFor(rarity: string) {
-  if (rarity === 'mythic') return 3800;
-  if (rarity === 'legendary') return 3200;
-  if (rarity === 'epic') return 2500;
-  if (rarity === 'rare') return 2000;
-  if (rarity === 'uncommon') return 1700;
-  return 1550;
+  if (rarity === 'mythic') return 5600;
+  if (rarity === 'legendary') return 5000;
+  if (rarity === 'epic') return 4200;
+  if (rarity === 'rare') return 3600;
+  if (rarity === 'uncommon') return 3000;
+  return 2600;
 }
 
 async function autoReveal() {
@@ -128,8 +128,8 @@ function revealNext() {
 .open-fit {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  height: calc(100dvh - 123px);
+  gap: 8px;
+  height: calc(100dvh - 108px);
   min-height: 0;
   overflow: hidden;
 }

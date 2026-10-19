@@ -47,7 +47,7 @@
                   <span class="badge r-rare">{{ typeLine }}</span>
                   <span class="badge" :class="`r-${card.rarity}`">{{ rarityLabel }}</span>
                   <span v-if="showFoilBadge" class="badge r-legendary">Brillante</span>
-                  <span v-if="card.artAnimatedUrl" class="badge r-epic">GIF</span>
+                  <span v-if="hasGifArt" class="badge r-epic">GIF</span>
                 </div>
                 <p class="desc">{{ card.description }}</p>
                 <p v-if="flavorLine" class="flavor">« {{ flavorLine }} »</p>
@@ -75,7 +75,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { mediaUrl } from '@/api/client';
-import { giphyIdFromUrl, resolveArtSrc } from '@/media/giphy';
+import { isAnimatedArtUrl, resolveArtSrc } from '@/media/giphy';
 import AnacraCardBack from '@/components/AnacraCardBack.vue';
 import { hashSeed, KIND_LABELS, RARITY_COLORS, RARITY_LABELS, kindHasCombatStats, type Card } from '@/types';
 
@@ -129,9 +129,9 @@ const typeLine = computed(() => {
 const showCombatStats = computed(() => kindHasCombatStats(props.card.kind || 'creature'));
 const paddedNumber = computed(() => String(props.card.collectorNumber || 0).padStart(3, '0'));
 const unlockAt = computed(() => props.card.animatedUnlockCopies || 5);
+const hasGifArt = computed(() => isAnimatedArtUrl(props.card.artAnimatedUrl));
 const gifUnlocked = computed(() => {
-  const hasGif = Boolean(props.card.artAnimatedUrl || giphyIdFromUrl(props.card.artUrl));
-  if (!hasGif) return false;
+  if (!hasGifArt.value) return false;
   if (props.ownedCopies == null) return true;
   return props.ownedCopies >= unlockAt.value;
 });
@@ -331,8 +331,8 @@ function onLeave() {
 }
 .card-scene.compact { width: 210px; height: 300px; }
 .card-scene.large {
-  width: min(420px, 86vw, calc(78vh * 0.7));
-  height: min(600px, 78vh, calc(86vw * 1.428));
+  width: min(560px, 94vw, calc(88dvh * 0.7));
+  height: min(800px, 88dvh, calc(94vw * 1.428));
 }
 .card-scene.pocket { width: 118px; height: 168px; }
 .card-scene.pocket .desc,
