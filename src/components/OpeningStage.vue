@@ -110,7 +110,7 @@ function computeLayout() {
   const el = revealsEl.value;
   const n = props.pulls.length;
   if (!el || n < 1) return;
-  const odds = 44;
+  const odds = 64;
   const gap = 12;
   const pad = 8;
   const w = Math.max(200, el.clientWidth - pad * 2);
@@ -267,11 +267,15 @@ function formatChance(pull: PulledCopy) {
 }
 .slot {
   position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   flex: 0 0 auto;
   background: transparent;
   border: 0;
   color: inherit;
-  padding: 0 0 40px;
+  padding: 0;
+  gap: 12px;
   cursor: pointer;
   transition: transform .35s ease, opacity .35s ease, filter .35s ease;
 }
@@ -286,10 +290,7 @@ function formatChance(pull: PulledCopy) {
 .slot.active { filter: none; }
 .slot.zoom { cursor: zoom-in; }
 .slot-odds {
-  position: absolute;
-  left: 50%;
-  bottom: 0;
-  transform: translateX(-50%);
+  position: relative;
   z-index: 2;
   display: flex;
   flex-direction: column;
@@ -298,7 +299,8 @@ function formatChance(pull: PulledCopy) {
   pointer-events: none;
   text-align: center;
   white-space: nowrap;
-  padding: 3px 8px;
+  margin-top: 4px;
+  padding: 4px 10px;
   border-radius: 12px;
   background: rgba(9, 7, 18, .88);
   border: 1px solid var(--line);
