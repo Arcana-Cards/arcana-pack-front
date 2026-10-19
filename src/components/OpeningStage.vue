@@ -17,54 +17,55 @@
       </button>
     </div>
     <div
-      v-else-if="shownPull"
-      class="focus"
+      v-else
+      ref="revealsEl"
+      class="reveals"
+      :style="{
+        '--n': pulls.length,
+        '--card-w': `${layout.cardW}px`,
+        '--card-h': `${layout.cardH}px`,
+      }"
     >
       <button
-        ref="heroEl"
-        class="hero"
+        v-for="(pull, index) in pulls"
+        :key="pull.id"
+        class="slot"
         type="button"
-        :style="{ '--card-w': `${layout.cardW}px`, '--card-h': `${layout.cardH}px` }"
-        @click="onHeroClick"
+        :class="{ active: index === current, done: index < current, hidden: index > current, zoom: allOpened }"
+        :style="slotStyle(index)"
+        @click="onSlotClick(index)"
       >
         <TradingCard
-          :key="shownPull.id"
-          large
-          :card="shownPull.card"
-          :foil="shownPull.foil"
-          :animated="shownPull.animated"
-          :owned-copies="copiesAt(shownIndex)"
-          :faceup="shownIndex <= current"
+          :card="pull.card"
+          :foil="pull.foil"
+          :animated="pull.animated"
+          :owned-copies="copiesAt(index)"
+          :faceup="index <= current"
         />
+        <div v-if="index <= current" class="slot-odds">
+          <span v-if="pull.isNew" class="badge r-legendary">Nouvelle</span>
+          <span class="owned">×{{ copiesAt(index) }}</span>
+          <span class="odds" :class="`r-${pull.card.rarity}`">{{ formatChance(pull) }}</span>
+        </div>
       </button>
-      <div class="slot-odds">
-        <span v-if="shownPull.isNew" class="badge r-legendary">Nouvelle</span>
-        <span class="owned">×{{ copiesAt(shownIndex) }}</span>
-        <span class="odds" :class="`r-${shownPull.card.rarity}`">{{ formatChance(shownPull) }}</span>
-      </div>
-      <div class="rail">
-        <button
-          v-for="(pull, index) in pulls"
-          :key="pull.id"
-          class="tick"
-          type="button"
-          :class="{ on: index === shownIndex, seen: index <= current, wait: index > current }"
-          :disabled="index > current"
-          :title="index <= current ? pull.card.name : `Carte ${index + 1}`"
-          @click="onRailClick(index)"
-        >
-          {{ index + 1 }}
-        </button>
-      </div>
     </div>
     <p v-if="allOpened" class="done-msg">
-      Range-les ensuite dans le cahier, ou ouvre un autre booster.
+      Clique une carte pour l’agrandir. Range-les ensuite dans le cahier, ou ouvre un autre booster.
     </p>
+    <CardLightbox
+      :card="inspected?.card ?? null"
+      :foil="inspected?.foil"
+      :foil-badge="inspected?.foil"
+      :animated="inspected?.animated"
+      :owned-copies="inspectedIndex >= 0 ? copiesAt(inspectedIndex) : inspected?.copies"
+      @close="inspected = null"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+import CardLightbox from '@/components/CardLightbox.vue';
 import PackArt from '@/components/PackArt.vue';
 import TradingCard from '@/components/TradingCard.vue';
 import type { PulledCopy, UserBooster } from '@/types';
@@ -80,21 +81,19 @@ const props = defineProps<{
 const emit = defineEmits<{ rip: []; next: [] }>();
 
 const canvas = ref<HTMLCanvasElement | null>(null);
-const heroEl = ref<HTMLElement | null>(null);
+const revealsEl = ref<HTMLElement | null>(null);
 const shake = ref(false);
-const picked = ref<number | null>(null);
-const layout = reactive({ cardW: 320, cardH: 458 });
+const inspected = ref<PulledCopy | null>(null);
+const layout = reactive({ cardW: 220, cardH: 315 });
 let raf = 0;
 let particles: Array<{ x: number; y: number; vx: number; vy: number; life: number; color: string }> = [];
 let resizeObs: ResizeObserver | null = null;
 
-const allOpened = computed(() => props.pulls.length > 0 && props.current >= props.pulls.length - 1);
-const shownIndex = computed(() => {
-  if (picked.value != null && picked.value <= props.current) return picked.value;
-  return Math.max(0, props.current);
-});
-const shownPull = computed(() => props.pulls[shownIndex.value] || null);
 const currentPull = computed(() => props.pulls[props.current]);
+const allOpened = computed(() => props.pulls.length > 0 && props.current >= props.pulls.length - 1);
+const inspectedIndex = computed(() => (
+  inspected.value ? props.pulls.findIndex((pull) => pull.id === inspected.value?.id) : -1
+));
 const fxClass = computed(() => currentPull.value && props.current >= 0 ? `fx-${currentPull.value.card.rarity}` : '');
 
 function copiesAt(index: number) {
@@ -108,31 +107,39 @@ function copiesAt(index: number) {
 }
 
 function computeLayout() {
-  const el = heroEl.value;
-  if (!el) return;
-  const w = Math.max(160, el.clientWidth);
-  const h = Math.max(200, el.clientHeight);
+  const el = revealsEl.value;
+  const n = props.pulls.length;
+  if (!el || n < 1) return;
+  const odds = 44;
+  const gap = 12;
+  const pad = 8;
+  const w = Math.max(200, el.clientWidth - pad * 2);
+  const h = Math.max(220, el.clientHeight - pad * 2);
   const aspect = 236 / 338;
-  let cardH = h;
-  let cardW = cardH * aspect;
-  if (cardW > w) {
-    cardW = w;
-    cardH = cardW / aspect;
-  }
-  layout.cardW = Math.max(180, Math.floor(cardW));
-  layout.cardH = Math.max(258, Math.floor(cardH));
+  const rows = n > 5 ? 2 : 1;
+  const cols = Math.ceil(n / rows);
+  const maxW = (w - gap * (cols - 1)) / cols;
+  const maxH = (h - odds * rows - gap * (rows - 1)) / rows;
+  let cardH = Math.min(maxH, maxW / aspect);
+  if (cardH < 160) cardH = 160;
+  layout.cardW = Math.floor(cardH * aspect);
+  layout.cardH = Math.floor(cardH);
 }
 
-function onHeroClick() {
-  if (!allOpened.value) emit('next');
+function slotStyle(index: number) {
+  const active = index === props.current;
+  return {
+    transform: active ? 'translateY(-6px) scale(1.04)' : 'none',
+    zIndex: active ? 2 : 1,
+  };
 }
 
-function onRailClick(index: number) {
-  if (index > props.current) {
-    if (index === props.current + 1) emit('next');
+function onSlotClick(index: number) {
+  if (allOpened.value && index <= props.current) {
+    inspected.value = props.pulls[index];
     return;
   }
-  picked.value = index;
+  if (index === props.current + 1) emit('next');
 }
 
 function burst(color: string, count = 40) {
@@ -173,7 +180,6 @@ function tick() {
 }
 
 watch(() => props.current, (index) => {
-  picked.value = null;
   const pull = props.pulls[index];
   if (!pull) return;
   const rare = ['rare', 'epic', 'legendary', 'mythic'].includes(pull.card.rarity);
@@ -187,11 +193,11 @@ watch(() => props.current, (index) => {
   }
 });
 
-watch(() => [props.pulls.length, shownIndex.value], async () => {
+watch(() => props.pulls.length, async () => {
   await nextTick();
-  if (heroEl.value && !resizeObs) {
+  if (revealsEl.value && !resizeObs) {
     resizeObs = new ResizeObserver(() => computeLayout());
-    resizeObs.observe(heroEl.value);
+    resizeObs.observe(revealsEl.value);
   }
   requestAnimationFrame(() => computeLayout());
 });
@@ -232,7 +238,7 @@ function formatChance(pull: PulledCopy) {
   background: radial-gradient(circle at 50% 30%, rgba(124,58,237,.18), transparent 40%), #090712;
   padding: 12px 12px 40px;
 }
-.stage.lined { min-height: 0; padding: 8px 8px 36px; }
+.stage.lined { min-height: 0; }
 .fx { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .idle { display: grid; place-items: center; align-content: center; gap: 16px; height: 100%; min-height: 0; }
 .open-pack { z-index: 2; }
@@ -241,80 +247,62 @@ function formatChance(pull: PulledCopy) {
   position: absolute;
   left: 12px;
   right: 12px;
-  bottom: 6px;
+  bottom: 8px;
   margin: 0;
   font-size: 0.82rem;
   pointer-events: none;
 }
-.focus {
+.reveals {
   position: relative;
   z-index: 1;
-  display: grid;
-  grid-template-rows: minmax(0, 1fr) auto auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  align-content: center;
+  gap: 28px 12px;
   height: 100%;
-  min-height: 0;
-  gap: 8px;
-}
-.hero {
-  min-height: 0;
   width: 100%;
-  height: 100%;
-  display: grid;
-  place-items: center;
+  margin: 0 auto;
+}
+.slot {
+  position: relative;
+  flex: 0 0 auto;
   background: transparent;
   border: 0;
   color: inherit;
-  padding: 0;
+  padding: 0 0 40px;
   cursor: pointer;
+  transition: transform .35s ease, opacity .35s ease, filter .35s ease;
 }
-.hero :deep(.card-wrap) {
-  width: 100%;
-  height: 100%;
-  min-height: 0;
-  display: grid;
-  place-items: center;
+.slot :deep(.card-scene) {
+  width: var(--card-w, 220px);
+  height: var(--card-h, 315px);
 }
-.hero :deep(.card-scene) {
-  width: var(--card-w, 320px);
-  height: var(--card-h, 458px);
-}
+.slot :deep(.bar) { font-size: 0.72rem; }
+.slot :deep(.badge) { font-size: 0.62rem; padding: 1px 5px; }
+.slot :deep(.desc) { font-size: calc(0.72rem * var(--copy-scale, 1)); }
+.slot.hidden { filter: brightness(.92); }
+.slot.active { filter: none; }
+.slot.zoom { cursor: zoom-in; }
 .slot-odds {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
   z-index: 2;
   display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 6px 10px;
+  flex-direction: column;
+  gap: 2px;
   align-items: center;
   pointer-events: none;
   text-align: center;
   white-space: nowrap;
-  padding: 4px 10px;
-  border-radius: 999px;
+  padding: 3px 8px;
+  border-radius: 12px;
   background: rgba(9, 7, 18, .88);
   border: 1px solid var(--line);
-  justify-self: center;
 }
-.rail {
-  display: flex;
-  justify-content: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-.tick {
-  width: 28px;
-  height: 28px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  background: #0c0914;
-  color: var(--muted);
-  font-family: Cinzel, serif;
-  font-size: 0.72rem;
-  cursor: pointer;
-}
-.tick.seen { color: var(--gold-2); border-color: color-mix(in srgb, var(--gold) 40%, var(--line)); }
-.tick.on { color: #1a1028; background: var(--gold); border-color: var(--gold); }
-.tick.wait { opacity: .45; cursor: default; }
 .owned {
   font-family: Cinzel, serif;
   font-size: 0.7rem;
